@@ -3,6 +3,7 @@ defmodule FeteBot.Tracker do
 
   alias FeteBot.Repo
   alias FeteBot.Tracker.{Channel, Scheduler, Formatter}
+  alias FeteBot.Notifier
 
   alias Nostrum.Api, as: Discord
   alias Nostrum.Struct.Message
@@ -53,6 +54,8 @@ defmodule FeteBot.Tracker do
         |> Channel.message_id_changeset(msg.id)
         |> Repo.update!()
 
+        Notifier.update_reactions(msg)
+
       {:error, err} ->
         Logger.error("Got #{inspect(err)} trying to post a new message to #{inspect(channel)}.")
     end
@@ -60,13 +63,14 @@ defmodule FeteBot.Tracker do
 
   defp update_message!(text, %Channel{message_id: msg_id} = channel) when is_integer(msg_id) do
     case Discord.edit_message(channel.channel_id, msg_id, text) do
-      {:ok, %Message{id: ^msg_id}} ->
+      {:ok, %Message{id: ^msg_id} = msg} ->
+        Notifier.update_reactions(msg)
         :ok
 
-      {:ok, %Message{} = msg} ->
-        channel
-        |> Channel.message_id_changeset(msg.id)
-        |> Repo.update!()
+      {:error, %{response: %{code: 30046}}} ->
+        # We can't edit our message any more, so let's delete it and post a new one.
+        Discord.delete_message(channel.channel_id, msg_id)
+        update_message!(text, %Channel{channel | message_id: nil})
 
       {:error, err} ->
         Logger.error("Got #{inspect(err)} trying to edit message in #{inspect(channel)}.")
