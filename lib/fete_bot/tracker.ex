@@ -54,6 +54,7 @@ defmodule FeteBot.Tracker do
         |> Channel.message_id_changeset(msg.id)
         |> Repo.update!()
 
+        Logger.info("Posted a new message in #{inspect(channel)}.")
         Notifier.update_reactions(msg)
 
       {:error, err} ->
@@ -67,10 +68,23 @@ defmodule FeteBot.Tracker do
         Notifier.update_reactions(msg)
         :ok
 
-      {:error, %{response: %{code: 30046}}} ->
-        # We can't edit our message any more, so let's delete it and post a new one.
-        Discord.delete_message(channel.channel_id, msg_id)
+      {:error, %{response: %{code: 10008}}} ->
+        Logger.warn("Can't find message ##{msg_id} any more, re-posting.")
+        # TODO: go back through history and delete any messages we find from us?
         update_message!(text, %Channel{channel | message_id: nil})
+
+      {:error, %{response: %{code: 30046}}} ->
+        # It seems that if we try to edit a message too much, Discord eventually stops us.
+        # I thought this was a permanent thing, but it seems to stop if you leave
+        # the message alone for a while?
+        Logger.warn("Can't edit message ##{msg_id} any more, deleting and re-posting.")
+        # It's important that we check the delete result here, since we don't
+        # want to end up with a whole bunch of messages, especially since our
+        # Notifier won't respond to messages that we don't know about in our DB.
+        case Discord.delete_message(channel.channel_id, msg_id) do
+          {:ok} -> update_message!(text, %Channel{channel | message_id: nil})
+          {:error, err} -> Logger.error("Got #{inspect(err)} trying to delete message.")
+        end
 
       {:error, err} ->
         Logger.error("Got #{inspect(err)} trying to edit message in #{inspect(channel)}.")
