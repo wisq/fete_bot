@@ -2,13 +2,12 @@ defmodule FeteBot.Tracker do
   require Logger
 
   alias FeteBot.Repo
-  alias FeteBot.Tracker.{Channel, Scheduler, Formatter}
-  alias FeteBot.Notifier
+  alias FeteBot.Tracker.{Channel, Scheduler, Formatter, Reactions}
 
   alias Nostrum.Api, as: Discord
   alias Nostrum.Struct.Message
 
-  # import Ecto.Query, only: [from: 2]
+  import Ecto.Query, only: [from: 2]
   alias Ecto.Changeset
 
   def enable(channel_id) do
@@ -35,6 +34,18 @@ defmodule FeteBot.Tracker do
     end
   end
 
+  def is_tracker_message?(channel_id, message_id) do
+    from(c in Channel,
+      where: c.channel_id == ^channel_id and c.message_id == ^message_id,
+      select: count(c.id)
+    )
+    |> Repo.one!()
+    |> then(fn
+      1 -> true
+      0 -> false
+    end)
+  end
+
   def post_all_schedules(events, now) do
     text = Formatter.generate_schedule(events, now)
 
@@ -55,7 +66,7 @@ defmodule FeteBot.Tracker do
         |> Repo.update!()
 
         Logger.info("Posted a new message in #{inspect(channel)}.")
-        Notifier.update_reactions(msg)
+        Reactions.update(msg)
 
       {:error, err} ->
         Logger.error("Got #{inspect(err)} trying to post a new message to #{inspect(channel)}.")
@@ -65,7 +76,7 @@ defmodule FeteBot.Tracker do
   defp update_message!(text, %Channel{message_id: msg_id} = channel) when is_integer(msg_id) do
     case Discord.edit_message(channel.channel_id, msg_id, text) do
       {:ok, %Message{id: ^msg_id} = msg} ->
-        Notifier.update_reactions(msg)
+        Reactions.update(msg)
         :ok
 
       {:error, %{response: %{code: 10008}}} ->

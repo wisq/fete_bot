@@ -17,8 +17,18 @@ defmodule FeteBot.Consumer do
     end
   end
 
-  def handle_event({:MESSAGE_REACTION_ADD, data, _}) do
-    FeteBot.Notifier.on_reaction_add(data)
+  def handle_event({:MESSAGE_REACTION_ADD, event, _}) do
+    case event.guild_id do
+      nil -> FeteBot.Notifier.Reactions.on_reaction_add(event)
+      id when is_integer(id) -> FeteBot.Tracker.Reactions.on_reaction_add(event)
+    end
+  end
+
+  def handle_event({:MESSAGE_REACTION_REMOVE, event, _}) do
+    case event.guild_id do
+      nil -> FeteBot.Notifier.Reactions.on_reaction_remove(event)
+      _ -> :noop
+    end
   end
 
   def handle_event({event, _, _}) do
