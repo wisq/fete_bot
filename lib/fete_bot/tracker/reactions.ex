@@ -25,6 +25,7 @@ defmodule FeteBot.Tracker.Reactions do
   defp on_command(:setup_alarms, event) do
     if Tracker.is_tracker_message?(event.channel_id, event.message_id) do
       Notifier.setup_alarms(event.user_id)
+      Discord.delete_user_reaction(event.channel_id, event.message_id, event.emoji, event.user_id)
     end
   end
 

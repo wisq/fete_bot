@@ -1,7 +1,7 @@
 defmodule FeteBot.Consumer do
   use Nostrum.Consumer
 
-  # alias Nostrum.Api
+  alias Nostrum.Cache.Me
 
   def start_link do
     Consumer.start_link(__MODULE__)
@@ -18,16 +18,18 @@ defmodule FeteBot.Consumer do
   end
 
   def handle_event({:MESSAGE_REACTION_ADD, event, _}) do
-    case event.guild_id do
-      nil -> FeteBot.Notifier.Reactions.on_reaction_add(event)
-      id when is_integer(id) -> FeteBot.Tracker.Reactions.on_reaction_add(event)
+    cond do
+      event.user_id == Me.get().id -> :noop
+      is_nil(event.guild_id) -> FeteBot.Notifier.Reactions.on_reaction_add(event)
+      is_integer(event.guild_id) -> FeteBot.Tracker.Reactions.on_reaction_add(event)
     end
   end
 
   def handle_event({:MESSAGE_REACTION_REMOVE, event, _}) do
-    case event.guild_id do
-      nil -> FeteBot.Notifier.Reactions.on_reaction_remove(event)
-      _ -> :noop
+    cond do
+      event.user_id == Me.get().id -> :noop
+      is_nil(event.guild_id) -> FeteBot.Notifier.Reactions.on_reaction_remove(event)
+      is_integer(event.guild_id) -> :noop
     end
   end
 
