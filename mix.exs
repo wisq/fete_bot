@@ -27,7 +27,8 @@ defmodule FeteBot.MixProject do
       {:nostrum, "~> 0.5"},
       {:ecto_sql, "~> 3.7"},
       {:postgrex, ">= 0.0.0"},
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      {:ecto_interval, "~> 0.2.4"}
     ]
   end
 end
