@@ -1,7 +1,7 @@
 defmodule FeteBot.Tracker.Scheduler do
   use GenServer
 
-  alias FeteBot.{Tracker, Fetes, TimeUtils}
+  alias FeteBot.{Tracker, Notifier, Fetes, TimeUtils}
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -12,8 +12,10 @@ defmodule FeteBot.Tracker.Scheduler do
   end
 
   def init(nil) do
-    # {events, timeout} = next_events_and_timeout([])
-    # {:ok, events, timeout}
+    # TODO: instead of just waiting one second, we should start our behaviour
+    # when we receive a `:READY` event from Discord.  Or maybe track the guild
+    # ID on each Channel record, and trigger on a `:GUILD_AVAILABLE`?  This
+    # would also allow us to fix our messages in the case of temporary downtime.
     {:ok, [], 1000}
   end
 
@@ -28,6 +30,7 @@ defmodule FeteBot.Tracker.Scheduler do
     now = DateTime.utc_now()
     {events, timeout} = next_events_and_timeout(events, now)
     Tracker.post_all_schedules(events, now)
+    events |> next_starting_event(now) |> Notifier.Scheduler.next_event()
     {:noreply, events, timeout}
   end
 
@@ -44,5 +47,10 @@ defmodule FeteBot.Tracker.Scheduler do
   defp event_wakeups(events) do
     events
     |> Enum.flat_map(fn e -> [e.start_time, e.end_time] end)
+  end
+
+  defp next_starting_event(events, now) do
+    events
+    |> Enum.find(&TimeUtils.is_after?(&1.start_time, now))
   end
 end

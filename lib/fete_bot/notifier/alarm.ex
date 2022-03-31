@@ -50,6 +50,11 @@ defmodule FeteBot.Notifier.Alarm do
     |> change(editing_message_id: msg_id)
   end
 
+  def update_last_alarm_message_changeset(%Alarm{} = alarm, msg_id) do
+    alarm
+    |> change(last_alarm_message_id: msg_id)
+  end
+
   def cycle_event_changeset(%Alarm{} = alarm) do
     alarm
     |> change(event: cycle_event(alarm.event))
@@ -104,4 +109,26 @@ defmodule FeteBot.Notifier.Alarm do
 
   defp describe_event(:epoch), do: "the **next series** of fêtes"
   defp describe_event(:session), do: "**each fête** in a series"
+
+  defp next_event(:epoch), do: "**next series** of fêtes"
+  defp next_event(:session), do: "**next fête**"
+
+  def formatted_alarm_message(alarm, event) do
+    [
+      "The ",
+      next_event(alarm.event),
+      " will start at ",
+      timestamp(event.start_time),
+      " (",
+      relative(event.start_time),
+      ")."
+    ]
+    |> Enum.join("")
+  end
+
+  defp timestamp(datetime, format \\ "t") do
+    "<t:#{DateTime.to_unix(datetime)}:#{format}>"
+  end
+
+  defp relative(datetime), do: timestamp(datetime, "R")
 end

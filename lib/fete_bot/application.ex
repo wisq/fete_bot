@@ -6,7 +6,8 @@ defmodule FeteBot.Application do
     children = [
       FeteBot.Repo,
       FeteBot.Consumer,
-      FeteBot.Tracker.Scheduler
+      FeteBot.Tracker.Scheduler,
+      FeteBot.Notifier.Scheduler
     ]
 
     options = [strategy: :rest_for_one, name: FeteBot.Supervisor]

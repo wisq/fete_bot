@@ -6,7 +6,8 @@ defmodule FeteBot.Notifier do
   import Ecto.Query, only: [from: 2]
 
   alias FeteBot.Repo
-  alias FeteBot.Notifier.{AlarmUser, Alarm, Reactions}
+  alias FeteBot.Notifier.{AlarmUser, Alarm, Reactions, Scheduler}
+  alias FeteBot.Fetes
 
   def setup_alarms(user_id) do
     {:ok, dm} = Discord.create_dm(user_id)
@@ -83,6 +84,7 @@ defmodule FeteBot.Notifier do
     case Alarm.find_available_number(user.alarms) do
       {:ok, n} ->
         Alarm.new_alarm(user, n) |> Repo.insert!()
+        Scheduler.refresh_user(user)
         Repo.preload(user, :alarms, force: true) |> post_summary()
 
       :error ->
@@ -91,13 +93,20 @@ defmodule FeteBot.Notifier do
   end
 
   def delete_all_alarms(%AlarmUser{} = user) do
-    from(a in Alarm, where: a.alarm_user_id == ^user.id, select: a.editing_message_id)
+    from(a in Alarm,
+      where: a.alarm_user_id == ^user.id,
+      select: {a.editing_message_id, a.last_alarm_message_id}
+    )
     |> Repo.delete_all()
     |> then(fn {_, msg_ids} ->
       msg_ids
-      |> Enum.each(&delete_message(user.dm_id, &1))
+      |> Enum.each(fn {id1, id2} ->
+        delete_message(user.dm_id, id1)
+        delete_message(user.dm_id, id2)
+      end)
     end)
 
+    Scheduler.refresh_user(user)
     Repo.preload(user, :alarms, force: true) |> post_summary()
   end
 
@@ -116,8 +125,7 @@ defmodule FeteBot.Notifier do
   defp post_alarm_edit_message(%Alarm{editing_message_id: old_id} = alarm)
        when is_integer(old_id) do
     alarm = Repo.preload(alarm, :alarm_user)
-    user = alarm.alarm_user
-    delete_message(user.dm_id, old_id)
+    delete_message(alarm.alarm_user.dm_id, old_id)
     post_alarm_edit_message(%Alarm{alarm | editing_message_id: nil})
   end
 
@@ -153,7 +161,9 @@ defmodule FeteBot.Notifier do
     alarm = Repo.preload(alarm, :alarm_user)
     user = alarm.alarm_user
     delete_message(user.dm_id, alarm.editing_message_id)
+    delete_message(user.dm_id, alarm.last_alarm_message_id)
     Repo.delete!(alarm)
+    Scheduler.refresh_user(user)
     Repo.preload(user, :alarms, force: true) |> post_summary()
   end
 
@@ -161,8 +171,21 @@ defmodule FeteBot.Notifier do
     alarm = Repo.preload(alarm, :alarm_user)
     user = alarm.alarm_user
     delete_message(user.dm_id, alarm.editing_message_id)
+    Scheduler.refresh_user(user)
     Repo.preload(user, :alarms, force: true) |> post_summary()
   end
+
+  def all_alarms_by_events(types) do
+    from(a in Alarm, where: a.event in ^types)
+    |> Repo.all()
+  end
+
+  def all_alarms_by_events_and_user(types, user_id) do
+    from(a in Alarm, where: a.event in ^types and a.alarm_user_id == ^user_id)
+    |> Repo.all()
+  end
+
+  defp delete_message(_, nil), do: :noop
 
   defp delete_message(channel_id, message_id) do
     case Discord.delete_message(channel_id, message_id) do
@@ -178,5 +201,18 @@ defmodule FeteBot.Notifier do
       {:error, %{status_code: 404, response: %{code: 10008}}} ->
         :not_found
     end
+  end
+
+  def trigger_alarm(%Alarm{} = alarm, %Fetes.Event{} = event) do
+    alarm = Repo.preload(alarm, :alarm_user)
+    user = alarm.alarm_user
+
+    if is_integer(old_id = alarm.last_alarm_message_id),
+      do: delete_message(user.dm_id, old_id)
+
+    text = Alarm.formatted_alarm_message(alarm, event)
+    msg = Discord.create_message!(user.dm_id, text)
+    Alarm.update_last_alarm_message_changeset(alarm, msg.id) |> Repo.update!()
+    Reactions.add_alarm_reactions(msg, alarm)
   end
 end

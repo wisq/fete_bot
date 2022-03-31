@@ -24,6 +24,10 @@ defmodule FeteBot.Notifier.Reactions do
   ]
   @editing_commands_map Map.new(@editing_commands, fn {c, e} -> {e, c} end)
 
+  @alarm_commands %{
+    "\u{274C}" => :delete
+  }
+
   def on_reaction_add(event) do
     emoji = Emoji.api_name(event.emoji)
 
@@ -82,6 +86,14 @@ defmodule FeteBot.Notifier.Reactions do
     |> Enum.each(fn {_, emoji} ->
       add_reaction(msg, emoji)
     end)
+  end
+
+  def add_alarm_reactions(%Message{} = msg, %Alarm{} = alarm) do
+    [
+      Alarm.number_emoji(alarm)
+      | Map.keys(@alarm_commands)
+    ]
+    |> Enum.each(&add_reaction(msg, &1))
   end
 
   defp add_reaction(%Message{} = msg, emoji) do

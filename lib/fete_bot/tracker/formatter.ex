@@ -47,11 +47,7 @@ defmodule FeteBot.Tracker.Formatter do
   end
 
   defp footer do
-    [
-      "React with ⏰ if you want this bot to send you personal reminders.",
-      "**(work in progress, doesn't do anything yet, coming soon)**"
-    ]
-    |> Enum.join("\n")
+    "React with ⏰ if you want this bot to send you personal reminders."
   end
 
   defp tag_event_time(event, now) do
