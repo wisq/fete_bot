@@ -2,7 +2,7 @@ defmodule FeteBot.Notifier.Alarm do
   use Ecto.Schema
 
   alias __MODULE__
-  # import Ecto.Changeset
+  import Ecto.Changeset
 
   alias FeteBot.Notifier.AlarmUser
 
@@ -12,7 +12,13 @@ defmodule FeteBot.Notifier.Alarm do
     field(:alarm_number, :integer)
     field(:event, Ecto.Enum, values: [:epoch, :session])
     field(:margin, Ecto.Timex.Duration)
+    field(:editing_message_id, :integer)
+    field(:last_alarm_message_id, :integer)
   end
+
+  alias Timex.Duration
+  @min_margin Duration.from_seconds(0) |> Duration.to_microseconds()
+  @max_margin Duration.from_hours(1) |> Duration.to_microseconds()
 
   @max_per_user 5
   def max_per_user, do: @max_per_user
@@ -37,6 +43,32 @@ defmodule FeteBot.Notifier.Alarm do
       alarm_number: number,
       margin: Timex.Duration.from_minutes(5)
     }
+  end
+
+  def update_editing_message_changeset(%Alarm{} = alarm, msg_id) do
+    alarm
+    |> change(editing_message_id: msg_id)
+  end
+
+  def cycle_event_changeset(%Alarm{} = alarm) do
+    alarm
+    |> change(event: cycle_event(alarm.event))
+  end
+
+  defp cycle_event(:epoch), do: :session
+  defp cycle_event(:session), do: :epoch
+
+  def add_margin_changeset(%Alarm{} = alarm, %Duration{} = duration) do
+    alarm
+    |> change(margin: add_margin(alarm.margin, duration))
+  end
+
+  defp add_margin(d1, d2) do
+    Duration.add(d1, d2)
+    |> Duration.to_microseconds()
+    |> min(@max_margin)
+    |> max(@min_margin)
+    |> Duration.from_microseconds()
   end
 
   def formatted_description(alarm) do

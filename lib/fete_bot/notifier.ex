@@ -32,7 +32,7 @@ defmodule FeteBot.Notifier do
   end
 
   defp post_summary(%AlarmUser{summary_message_id: old_id} = user) when is_integer(old_id) do
-    Discord.delete_message(user.dm_id, old_id)
+    delete_message(user.dm_id, old_id)
     %AlarmUser{user | summary_message_id: nil} |> post_summary()
   end
 
@@ -64,6 +64,19 @@ defmodule FeteBot.Notifier do
     end
   end
 
+  def find_alarm_by_editing_message(channel_id, message_id) do
+    query =
+      from(a in Alarm,
+        join: u in assoc(a, :alarm_user),
+        where: u.dm_id == ^channel_id and a.editing_message_id == ^message_id
+      )
+
+    case Repo.one(query) do
+      %Alarm{} = alarm -> {:ok, alarm}
+      nil -> :error
+    end
+  end
+
   def create_alarm(%AlarmUser{} = user) do
     user = Repo.preload(user, :alarms)
 
@@ -78,7 +91,92 @@ defmodule FeteBot.Notifier do
   end
 
   def delete_all_alarms(%AlarmUser{} = user) do
-    from(a in Alarm, where: a.alarm_user_id == ^user.id) |> Repo.delete_all()
+    from(a in Alarm, where: a.alarm_user_id == ^user.id, select: a.editing_message_id)
+    |> Repo.delete_all()
+    |> then(fn {_, msg_ids} ->
+      msg_ids
+      |> Enum.each(&delete_message(user.dm_id, &1))
+    end)
+
     Repo.preload(user, :alarms, force: true) |> post_summary()
+  end
+
+  def edit_alarm(%AlarmUser{} = user, number) when is_integer(number) do
+    case Repo.get_by(Alarm, alarm_user_id: user.id, alarm_number: number) do
+      %Alarm{} = alarm ->
+        %Alarm{alarm | alarm_user: user}
+        |> post_alarm_edit_message()
+
+      nil ->
+        emoji = Alarm.number_emoji(number)
+        Discord.create_message(user.dm_id, "You don't have a #{emoji} alarm.")
+    end
+  end
+
+  defp post_alarm_edit_message(%Alarm{editing_message_id: old_id} = alarm)
+       when is_integer(old_id) do
+    alarm = Repo.preload(alarm, :alarm_user)
+    user = alarm.alarm_user
+    delete_message(user.dm_id, old_id)
+    post_alarm_edit_message(%Alarm{alarm | editing_message_id: nil})
+  end
+
+  defp post_alarm_edit_message(%Alarm{} = alarm) do
+    alarm = Repo.preload(alarm, :alarm_user)
+    user = alarm.alarm_user
+    text = Alarm.formatted_description(alarm)
+    msg = Discord.create_message!(user.dm_id, text)
+    Alarm.update_editing_message_changeset(alarm, msg.id) |> Repo.update!()
+    Reactions.add_editing_reactions(msg)
+  end
+
+  defp update_alarm_edit_message(%Alarm{} = alarm) do
+    alarm = Repo.preload(alarm, :alarm_user)
+    user = alarm.alarm_user
+    text = Alarm.formatted_description(alarm)
+    Discord.edit_message(user.dm_id, alarm.editing_message_id, text)
+  end
+
+  def change_alarm_margin(alarm, mins) do
+    Alarm.add_margin_changeset(alarm, Timex.Duration.from_minutes(mins))
+    |> Repo.update!()
+    |> update_alarm_edit_message()
+  end
+
+  def cycle_alarm_event(alarm) do
+    Alarm.cycle_event_changeset(alarm)
+    |> Repo.update!()
+    |> update_alarm_edit_message()
+  end
+
+  def delete_alarm(alarm) do
+    alarm = Repo.preload(alarm, :alarm_user)
+    user = alarm.alarm_user
+    delete_message(user.dm_id, alarm.editing_message_id)
+    Repo.delete!(alarm)
+    Repo.preload(user, :alarms, force: true) |> post_summary()
+  end
+
+  def finish_editing_alarm(alarm) do
+    alarm = Repo.preload(alarm, :alarm_user)
+    user = alarm.alarm_user
+    delete_message(user.dm_id, alarm.editing_message_id)
+    Repo.preload(user, :alarms, force: true) |> post_summary()
+  end
+
+  defp delete_message(channel_id, message_id) do
+    case Discord.delete_message(channel_id, message_id) do
+      {:ok} ->
+        :ok
+
+      {:error, %{status_code: 429, response: %{retry_after: secs}}} when secs < 5.0 ->
+        ms = ceil(secs * 1000)
+        Logger.warn("Rate-limited deleting messages, sleeping for #{ms}ms")
+        Process.sleep(ms)
+        delete_message(channel_id, message_id)
+
+      {:error, %{status_code: 404, response: %{code: 10008}}} ->
+        :not_found
+    end
   end
 end
