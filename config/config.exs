@@ -1,15 +1,8 @@
 import Config
 
-config :nostrum,
-  token: File.read!(".secrets/discord_bot_token") |> String.trim()
-
 config :fete_bot,
   ecto_repos: [FeteBot.Repo]
 
-config :fete_bot, FeteBot.Repo,
-  username: "postgres",
-  password: "postgres",
-  database: "fetebot",
-  hostname: "localhost",
-  pool_size: 10,
-  after_connect: {FeteBot.Repo, :create_public_schema, database: "fetebot"}
+# Import environment specific config. This must remain at the bottom
+# of this file so it overrides the configuration defined above.
+import_config "#{config_env()}.exs"

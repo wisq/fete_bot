@@ -1,0 +1,32 @@
+version: "3"
+services:
+  admin:
+    image: fetebot-release
+    container_name: fetebot-admin
+    env_file:
+      - .env.deploy
+    environment:
+      - APP_MODE=admin
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: eval FeteBot.Release.migrate
+    restart: "no"
+  server:
+    image: fetebot-release
+    container_name: fetebot-bot
+    env_file:
+      - .env.deploy
+    environment:
+      - APP_MODE=bot
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: start
+    depends_on:
+      - admin
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "find /fetebot.watchdog -mmin -1 | grep fetebot.watchdog"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s

@@ -27,3 +27,4 @@ fete_bot-*.tar
 
 # Secrets (e.g. bot token)
 /.secrets/
+/.env.*
