@@ -3,6 +3,7 @@ defmodule FeteBot.Notifier.Scheduler do
   require Logger
 
   defmodule State do
+    @enforce_keys [:next_event]
     defstruct(
       next_event: nil,
       alarm_queue: []
@@ -31,7 +32,7 @@ defmodule FeteBot.Notifier.Scheduler do
   end
 
   def init(nil) do
-    {:ok, %State{}}
+    {:ok, %State{next_event: nil}}
   end
 
   def handle_cast({:next_event, event}, %State{next_event: event} = state) do
@@ -65,7 +66,7 @@ defmodule FeteBot.Notifier.Scheduler do
   def handle_info(:timeout, state) do
     {triggered, remaining} = state.alarm_queue |> queue_pop_expired()
     triggered |> Enum.each(&trigger_alarm/1)
-    {:noreply, %State{alarm_queue: remaining}} |> with_timeout()
+    {:noreply, %State{state | alarm_queue: remaining}} |> with_timeout()
   end
 
   defp trigger_alarm(%QueueEntry{event: event, alarm: alarm}) do
