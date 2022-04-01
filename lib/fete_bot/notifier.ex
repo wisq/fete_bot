@@ -112,7 +112,10 @@ defmodule FeteBot.Notifier do
         Repo.preload(user, :alarms, force: true) |> post_summary()
 
       :error ->
-        Discord.create_message(user.dm_id, "Sorry, you can't have any more alarms.")
+        # They shouldn't have this emoji available anyway.
+        # If they're gonna "hack" the emoji system, ignore them.
+        # TODO: Consider adding proper error messages that we clean up later.
+        :ignore
     end
   end
 
