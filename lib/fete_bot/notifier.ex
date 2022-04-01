@@ -78,6 +78,19 @@ defmodule FeteBot.Notifier do
     end
   end
 
+  def find_alarm_by_last_alarm_message(channel_id, message_id) do
+    query =
+      from(a in Alarm,
+        join: u in assoc(a, :alarm_user),
+        where: u.dm_id == ^channel_id and a.last_alarm_message_id == ^message_id
+      )
+
+    case Repo.one(query) do
+      %Alarm{} = alarm -> {:ok, alarm}
+      nil -> :error
+    end
+  end
+
   def create_alarm(%AlarmUser{} = user) do
     user = Repo.preload(user, :alarms)
 
@@ -121,6 +134,8 @@ defmodule FeteBot.Notifier do
         Discord.create_message(user.dm_id, "You don't have a #{emoji} alarm.")
     end
   end
+
+  def edit_alarm(%Alarm{} = alarm), do: alarm |> post_alarm_edit_message()
 
   defp post_alarm_edit_message(%Alarm{editing_message_id: old_id} = alarm)
        when is_integer(old_id) do

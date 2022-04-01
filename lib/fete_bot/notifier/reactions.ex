@@ -6,12 +6,13 @@ defmodule FeteBot.Notifier.Reactions do
   alias FeteBot.Notifier
   alias FeteBot.Notifier.Alarm
 
-  @summary_alarm_commands 1..9 |> Map.new(fn n -> {Alarm.number_emoji(n), {:edit, n}} end)
+  @alarm_number_commands 1..9 |> Map.new(fn n -> {Alarm.number_emoji(n), {:edit, n}} end)
+
   @summary_commands %{
     "\u{23F0}" => :add,
     "\u{274C}" => :delete_all
   }
-  @all_summary_commands Map.merge(@summary_commands, @summary_alarm_commands)
+  @all_summary_commands Map.merge(@summary_commands, @alarm_number_commands)
 
   @editing_commands [
     {:back_large, "\u{23EE}\u{FE0F}"},
@@ -27,6 +28,7 @@ defmodule FeteBot.Notifier.Reactions do
   @alarm_commands %{
     "\u{274C}" => :delete
   }
+  @all_alarm_commands Map.merge(@alarm_commands, @alarm_number_commands)
 
   def on_reaction_add(event) do
     emoji = Emoji.api_name(event.emoji)
@@ -34,6 +36,7 @@ defmodule FeteBot.Notifier.Reactions do
     cond do
       handle_summary_command(emoji, event.channel_id, event.message_id) -> :ok
       handle_editing_command(emoji, event.channel_id, event.message_id) -> :ok
+      handle_alarm_command(emoji, event.channel_id, event.message_id) -> :ok
       true -> :noop
     end
   end
@@ -54,6 +57,16 @@ defmodule FeteBot.Notifier.Reactions do
     with {:ok, command} <- Map.fetch(@editing_commands_map, emoji),
          {:ok, alarm} <- Notifier.find_alarm_by_editing_message(channel_id, message_id) do
       on_editing_command(command, alarm)
+      true
+    else
+      :error -> false
+    end
+  end
+
+  defp handle_alarm_command(emoji, channel_id, message_id) do
+    with {:ok, command} <- Map.fetch(@all_alarm_commands, emoji),
+         {:ok, alarm} <- Notifier.find_alarm_by_last_alarm_message(channel_id, message_id) do
+      on_alarm_command(command, alarm)
       true
     else
       :error -> false
@@ -120,4 +133,8 @@ defmodule FeteBot.Notifier.Reactions do
   defp on_editing_command(:cycle_event, alarm), do: Notifier.cycle_alarm_event(alarm)
   defp on_editing_command(:delete, alarm), do: Notifier.delete_alarm(alarm)
   defp on_editing_command(:finished, alarm), do: Notifier.finish_editing_alarm(alarm)
+
+  defp on_alarm_command({:edit, n}, %{alarm_number: n} = alarm), do: Notifier.edit_alarm(alarm)
+  defp on_alarm_command({:edit, _}, _), do: :ignore
+  defp on_alarm_command(:delete, alarm), do: Notifier.delete_alarm(alarm)
 end
