@@ -7,6 +7,7 @@ defmodule FeteBot.Notifier.Reactions do
   alias FeteBot.Notifier.Alarm
 
   @alarm_number_commands 1..9 |> Map.new(fn n -> {Alarm.number_emoji(n), {:edit, n}} end)
+  @generic_n_emoji "\u{1F1F3}"
 
   @summary_commands %{
     "\u{23F0}" => :add,
@@ -137,4 +138,36 @@ defmodule FeteBot.Notifier.Reactions do
   defp on_alarm_command({:edit, n}, %{alarm_number: n} = alarm), do: Notifier.edit_alarm(alarm)
   defp on_alarm_command({:edit, _}, _), do: :ignore
   defp on_alarm_command(:delete, alarm), do: Notifier.delete_alarm(alarm)
+
+  def alarm_editing_legend do
+    @editing_commands
+    |> Enum.map(fn {cmd, emoji} ->
+      "#{emoji} — #{editing_description(cmd)}"
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp editing_description(:back_large), do: "five minutes earlier"
+  defp editing_description(:back_small), do: "one minute earlier"
+  defp editing_description(:fwd_large), do: "five minutes later"
+  defp editing_description(:fwd_small), do: "one minute later"
+  defp editing_description(:cycle_event), do: "toggle alarm type (each fête / each series)"
+  defp editing_description(:delete), do: "delete this alarm"
+  defp editing_description(:finished), do: "done editing"
+
+  def summary_legend(can_edit) do
+    case can_edit do
+      true -> [{@generic_n_emoji, :edit}]
+      false -> []
+    end
+    |> Enum.concat(@summary_commands)
+    |> Enum.map(fn {emoji, cmd} ->
+      "#{emoji} — #{summary_description(cmd)}"
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp summary_description(:edit), do: "edit alarm #{@generic_n_emoji}"
+  defp summary_description(:add), do: "add a new alarm"
+  defp summary_description(:delete_all), do: "delete **all** alarms"
 end

@@ -44,13 +44,24 @@ defmodule FeteBot.Notifier do
     Reactions.add_summary_reactions(msg, user.alarms)
   end
 
-  defp summary_text([]), do: "You have no alarms set up."
+  defp summary_text([]) do
+    [
+      "You have no alarms set up.",
+      Reactions.summary_legend(false)
+    ]
+    |> Enum.join("\n\n")
+  end
 
   defp summary_text(alarms) do
-    alarms
-    |> Enum.sort_by(& &1.alarm_number)
-    |> Enum.map(&Alarm.formatted_description/1)
-    |> Enum.join("\n")
+    [
+      "You have the following alarms:",
+      alarms
+      |> Enum.sort_by(& &1.alarm_number)
+      |> Enum.map(&Alarm.formatted_description/1)
+      |> Enum.join("\n"),
+      Reactions.summary_legend(true)
+    ]
+    |> Enum.join("\n\n")
   end
 
   def find_user_by_summary_message(channel_id, message_id) do
@@ -147,7 +158,7 @@ defmodule FeteBot.Notifier do
   defp post_alarm_edit_message(%Alarm{} = alarm) do
     alarm = Repo.preload(alarm, :alarm_user)
     user = alarm.alarm_user
-    text = Alarm.formatted_description(alarm)
+    text = alarm_editing_text(alarm)
     msg = Discord.create_message!(user.dm_id, text)
     Alarm.update_editing_message_changeset(alarm, msg.id) |> Repo.update!()
     Reactions.add_editing_reactions(msg)
@@ -156,8 +167,17 @@ defmodule FeteBot.Notifier do
   defp update_alarm_edit_message(%Alarm{} = alarm) do
     alarm = Repo.preload(alarm, :alarm_user)
     user = alarm.alarm_user
-    text = Alarm.formatted_description(alarm)
+    text = alarm_editing_text(alarm)
     Discord.edit_message(user.dm_id, alarm.editing_message_id, text)
+  end
+
+  defp alarm_editing_text(alarm) do
+    [
+      "Use the reactions below to edit this alarm:",
+      Alarm.formatted_description(alarm),
+      Reactions.alarm_editing_legend()
+    ]
+    |> Enum.join("\n\n")
   end
 
   def change_alarm_margin(alarm, mins) do
