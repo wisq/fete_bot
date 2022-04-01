@@ -3,6 +3,7 @@ defmodule FeteBot.Notifier.Alarm do
 
   alias __MODULE__
   import Ecto.Changeset
+  alias Timex.Duration
 
   alias FeteBot.Notifier.AlarmUser
 
@@ -16,9 +17,10 @@ defmodule FeteBot.Notifier.Alarm do
     field(:last_alarm_message_id, :integer)
   end
 
-  alias Timex.Duration
-  @min_margin Duration.from_seconds(0) |> Duration.to_microseconds()
-  @max_margin Duration.from_hours(1) |> Duration.to_microseconds()
+  def min_margin(_), do: Duration.from_seconds(0)
+
+  def max_margin(:epoch), do: Duration.from_hours(3)
+  def max_margin(:session), do: Duration.from_minutes(90)
 
   @max_per_user 5
   def max_per_user, do: @max_per_user
@@ -41,7 +43,7 @@ defmodule FeteBot.Notifier.Alarm do
       alarm_user_id: user.id,
       event: :session,
       alarm_number: number,
-      margin: Timex.Duration.from_minutes(5)
+      margin: Duration.from_minutes(5)
     }
   end
 
@@ -56,8 +58,13 @@ defmodule FeteBot.Notifier.Alarm do
   end
 
   def cycle_event_changeset(%Alarm{} = alarm) do
+    new_event = cycle_event(alarm.event)
+
     alarm
-    |> change(event: cycle_event(alarm.event))
+    |> change(
+      event: new_event,
+      margin: alarm.margin |> constrain_margin(new_event)
+    )
   end
 
   defp cycle_event(:epoch), do: :session
@@ -65,14 +72,19 @@ defmodule FeteBot.Notifier.Alarm do
 
   def add_margin_changeset(%Alarm{} = alarm, %Duration{} = duration) do
     alarm
-    |> change(margin: add_margin(alarm.margin, duration))
+    |> change(
+      margin:
+        alarm.margin
+        |> Duration.add(duration)
+        |> constrain_margin(alarm.event)
+    )
   end
 
-  defp add_margin(d1, d2) do
-    Duration.add(d1, d2)
+  defp constrain_margin(margin, event) do
+    margin
     |> Duration.to_microseconds()
-    |> min(@max_margin)
-    |> max(@min_margin)
+    |> min(max_margin(event) |> Duration.to_microseconds())
+    |> max(min_margin(event) |> Duration.to_microseconds())
     |> Duration.from_microseconds()
   end
 
