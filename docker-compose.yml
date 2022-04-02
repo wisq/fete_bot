@@ -24,9 +24,3 @@ services:
     depends_on:
       - admin
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "find /fetebot.watchdog -mmin -1 | grep fetebot.watchdog"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 30s
