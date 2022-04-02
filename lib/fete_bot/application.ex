@@ -3,13 +3,15 @@ defmodule FeteBot.Application do
   use Application
 
   def start(_type, _args) do
-    children =
-      [
-        FeteBot.Repo
-      ] ++ bot_children()
-
     options = [strategy: :rest_for_one, name: FeteBot.Supervisor]
-    Supervisor.start_link(children, options)
+
+    [
+      [FeteBot.Repo],
+      bot_children(),
+      FeteBot.Watchdog.children()
+    ]
+    |> Enum.concat()
+    |> Supervisor.start_link(options)
   end
 
   def start_bot? do

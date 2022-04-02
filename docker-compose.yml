@@ -18,6 +18,7 @@ services:
       - .env.deploy
     environment:
       - APP_MODE=bot
+      - WATCHDOG_FILE=/fetebot.watchdog
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: start

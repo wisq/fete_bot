@@ -2,6 +2,7 @@ import Config
 alias FeteBot.Secrets
 
 config :nostrum, token: Secrets.fetch!("DISCORD_BOT_TOKEN")
+config :fete_bot, FeteBot.Watchdog, file: System.get_env("WATCHDOG_FILE")
 
 if config_env() == :prod do
   config :fete_bot, FeteBot.Repo,
