@@ -1,7 +1,9 @@
 defmodule FeteBot.Tracker.Scheduler do
   use GenServer
 
-  alias FeteBot.{Tracker, Notifier, Fetes, TimeUtils}
+  alias FeteBot.{Tracker, Notifier, TimeUtils}
+  alias FeteBot.Fetes
+  alias FeteBot.Fetes.Event
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -30,7 +32,7 @@ defmodule FeteBot.Tracker.Scheduler do
     now = DateTime.utc_now()
     {events, timeout} = next_events_and_timeout(events, now)
     Tracker.post_all_schedules(events, now)
-    events |> next_starting_event(now) |> Notifier.Scheduler.next_event()
+    update_notifier_scheduler(events, now)
     {:noreply, events, timeout}
   end
 
@@ -47,6 +49,13 @@ defmodule FeteBot.Tracker.Scheduler do
   defp event_wakeups(events) do
     events
     |> Enum.flat_map(fn e -> [e.start_time, e.end_time] end)
+  end
+
+  defp update_notifier_scheduler(events, now) do
+    case events |> next_starting_event(now) do
+      %Event{} = event -> Notifier.Scheduler.next_event(event)
+      nil -> :noop
+    end
   end
 
   defp next_starting_event(events, now) do
