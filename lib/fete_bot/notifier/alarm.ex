@@ -103,27 +103,46 @@ defmodule FeteBot.Notifier.Alarm do
   def number_emoji(n) when n in 1..9, do: "#{n}\uFE0F\u20E3"
 
   defp describe_margin(duration) do
-    case Timex.Duration.to_minutes(duration, truncate: true) do
-      0 -> "immediately"
-      1 -> "one minute"
-      2 -> "two minutes"
-      3 -> "three minutes"
-      4 -> "four minutes"
-      5 -> "five minutes"
-      6 -> "six minutes"
-      7 -> "seven minutes"
-      8 -> "eight minutes"
-      9 -> "nine minutes"
-      10 -> "ten minutes"
-      n -> "#{n} minutes"
-    end
+    Timex.Duration.to_minutes(duration, truncate: true)
+    |> describe_minutes()
   end
+
+  defp describe_alarm_start_time(duration) do
+    Timex.Duration.to_minutes(duration, truncate: true)
+    |> describe_alarm_start_minutes()
+  end
+
+  defp describe_minutes(0), do: "immediately"
+  defp describe_minutes(1), do: "one minute"
+  defp describe_minutes(2), do: "two minutes"
+  defp describe_minutes(3), do: "three minutes"
+  defp describe_minutes(4), do: "four minutes"
+  defp describe_minutes(5), do: "five minutes"
+  defp describe_minutes(6), do: "six minutes"
+  defp describe_minutes(7), do: "seven minutes"
+  defp describe_minutes(8), do: "eight minutes"
+  defp describe_minutes(9), do: "nine minutes"
+  defp describe_minutes(10), do: "ten minutes"
+  defp describe_minutes(n), do: "#{n} minutes"
+
+  defp describe_alarm_start_minutes(0), do: "is starting right now!"
+  defp describe_alarm_start_minutes(n), do: "will start in #{describe_minutes(n)}."
 
   defp describe_event(:epoch), do: "the **next series** of fêtes"
   defp describe_event(:session), do: "**each fête** in a series"
 
   defp next_event(:epoch), do: "**next series** of fêtes"
   defp next_event(:session), do: "**next fête**"
+
+  def unformatted_alarm_message(alarm, _event) do
+    [
+      "The ",
+      next_event(alarm.event) |> String.replace("**", ""),
+      " ",
+      describe_alarm_start_time(alarm.margin)
+    ]
+    |> Enum.join("")
+  end
 
   def formatted_alarm_message(alarm, event) do
     [
