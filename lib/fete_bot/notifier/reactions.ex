@@ -1,8 +1,8 @@
 defmodule FeteBot.Notifier.Reactions do
   require Logger
-  alias Nostrum.Api, as: Discord
   alias Nostrum.Struct.{Message, Emoji}
 
+  alias FeteBot.Discord
   alias FeteBot.Notifier
   alias FeteBot.Notifier.Alarm
 

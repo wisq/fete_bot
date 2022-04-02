@@ -1,11 +1,11 @@
 defmodule FeteBot.Notifier do
   require Logger
 
-  alias Nostrum.Api, as: Discord
   alias Ecto.Multi
   import Ecto.Query, only: [from: 2]
 
   alias FeteBot.Repo
+  alias FeteBot.Discord
   alias FeteBot.Notifier.{AlarmUser, Alarm, Reactions, Scheduler}
   alias FeteBot.Fetes
 

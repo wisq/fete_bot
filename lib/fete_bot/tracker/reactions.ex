@@ -1,11 +1,11 @@
 defmodule FeteBot.Tracker.Reactions do
   require Logger
 
-  alias FeteBot.{Tracker, Notifier}
-
-  alias Nostrum.Api, as: Discord
   alias Nostrum.Struct.{Message, Emoji, User, Event.MessageReactionAdd}
   alias Nostrum.Cache.Me
+
+  alias FeteBot.{Tracker, Notifier}
+  alias FeteBot.Discord
 
   @reaction_commands %{
     "\u{23F0}" => :setup_alarms

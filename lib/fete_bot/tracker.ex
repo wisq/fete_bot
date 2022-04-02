@@ -1,11 +1,11 @@
 defmodule FeteBot.Tracker do
   require Logger
 
+  alias Nostrum.Struct.Message
+
   alias FeteBot.Repo
   alias FeteBot.Tracker.{Channel, Scheduler, Formatter, Reactions}
-
-  alias Nostrum.Api, as: Discord
-  alias Nostrum.Struct.Message
+  alias FeteBot.Discord
 
   import Ecto.Query, only: [from: 2]
   alias Ecto.Changeset

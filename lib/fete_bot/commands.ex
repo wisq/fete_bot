@@ -1,9 +1,9 @@
 defmodule FeteBot.Commands do
-  alias Nostrum.Api
   alias Nostrum.Cache.GuildCache
   alias Nostrum.Struct.Message
 
   alias FeteBot.Tracker
+  alias FeteBot.Discord
 
   @bot "FêteBot"
 
@@ -47,7 +47,7 @@ defmodule FeteBot.Commands do
   end
 
   defp reply(msg, text) do
-    Api.create_message(
+    Discord.create_message(
       msg.channel_id,
       content: text,
       message_reference: %{message_id: msg.id}
