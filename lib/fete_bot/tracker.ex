@@ -86,16 +86,8 @@ defmodule FeteBot.Tracker do
 
       {:error, %{response: %{code: 30046}}} ->
         # It seems that if we try to edit a message too much, Discord eventually stops us.
-        # I thought this was a permanent thing, but it seems to stop if you leave
-        # the message alone for a while?
-        Logger.warn("Can't edit message ##{msg_id} any more, deleting and re-posting.")
-        # It's important that we check the delete result here, since we don't
-        # want to end up with a whole bunch of messages, especially since our
-        # Notifier won't respond to messages that we don't know about in our DB.
-        case Discord.delete_message(channel.channel_id, msg_id) do
-          {:ok} -> update_message!(text, %Channel{channel | message_id: nil})
-          {:error, err} -> Logger.error("Got #{inspect(err)} trying to delete message.")
-        end
+        # This generally only happens if the bot is crashing a lot.
+        Logger.error("Can't edit message ##{msg_id} any more.  Are we crashing?")
 
       {:error, err} ->
         Logger.error("Got #{inspect(err)} trying to edit message in #{inspect(channel)}.")
