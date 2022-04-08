@@ -37,7 +37,8 @@ defmodule FeteBot.MixProject do
       {:ecto_sql, "~> 3.7"},
       {:postgrex, ">= 0.0.0"},
       {:timex, "~> 3.7"},
-      {:ecto_timex_duration, git: "https://github.com/wisq/ecto_timex_duration.git"}
+      {:ecto_timex_duration, git: "https://github.com/wisq/ecto_timex_duration.git"},
+      {:briefly, "~> 0.3", only: :test, runtime: false}
     ]
   end
 
