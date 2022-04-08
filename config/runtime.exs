@@ -1,7 +1,9 @@
 import Config
 alias FeteBot.Secrets
 
-config :nostrum, token: Secrets.fetch!("DISCORD_BOT_TOKEN")
+unless config_env() == :test do
+  config :nostrum, token: Secrets.fetch!("DISCORD_BOT_TOKEN")
+end
 
 if config_env() == :prod do
   config :fete_bot, FeteBot.Repo,
