@@ -1,6 +1,8 @@
 defmodule FeteBot.Tracker.Formatter do
   alias FeteBot.{TimeUtils, WindowMap}
 
+  @alarm_clock "\u{23F0}"
+
   def generate_schedule(events, now) do
     tagged_events =
       events
@@ -46,14 +48,18 @@ defmodule FeteBot.Tracker.Formatter do
     "The current series of fêtes is almost over, and will end #{relative(last.end_time)}."
   end
 
+  defp header_start_text(_, {:past, _}) do
+    raise ArgumentError, "Invalid schedule, all events are in the past"
+  end
+
   defp footer do
-    "React with ⏰ if you want this bot to send you personal reminders."
+    "React with #{@alarm_clock} if you want this bot to send you personal reminders."
   end
 
   defp tag_event_time(event, now) do
     cond do
-      event.end_time |> TimeUtils.is_before?(now) -> {:past, event}
-      event.start_time |> TimeUtils.is_before?(now) -> {:ongoing, event}
+      event.end_time |> TimeUtils.is_before_or_at?(now) -> {:past, event}
+      event.start_time |> TimeUtils.is_before_or_at?(now) -> {:ongoing, event}
       true -> {:future, event}
     end
   end
