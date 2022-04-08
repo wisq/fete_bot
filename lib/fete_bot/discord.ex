@@ -1,5 +1,5 @@
 defmodule FeteBot.Discord do
-  @config Application.get_env(:fetebot, __MODULE__, [])
+  @config Application.get_env(:fete_bot, __MODULE__, [])
   @backend Keyword.get(@config, :backend, Nostrum.Api)
   require Logger
 
