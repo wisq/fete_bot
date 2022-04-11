@@ -1,4 +1,16 @@
 defmodule FeteBot.TimeUtils do
+  @config Application.get_env(:fete_bot, __MODULE__, [])
+  @backend Keyword.get(@config, :backend, DateTime)
+
+  @doc """
+  Gets the current time, in the UTC timezone.
+
+  Normally equivalent to `DateTime.utc_now/0`, but can be mocked.
+  """
+  def utc_now do
+    @backend.utc_now()
+  end
+
   @doc """
   Does dt1 come before dt2?
   """

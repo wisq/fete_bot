@@ -22,21 +22,21 @@ defmodule FeteBot.Tracker.Scheduler do
   end
 
   def handle_cast({:manual, channel}, events) do
-    now = DateTime.utc_now()
+    now = TimeUtils.utc_now()
     {events, timeout} = next_events_and_timeout(events)
     Tracker.post_schedule(channel, events, now)
     {:noreply, events, timeout}
   end
 
   def handle_info(:timeout, events) do
-    now = DateTime.utc_now()
+    now = TimeUtils.utc_now()
     {events, timeout} = next_events_and_timeout(events, now)
     Tracker.post_all_schedules(events, now)
     update_notifier_scheduler(events, now)
     {:noreply, events, timeout}
   end
 
-  defp next_events_and_timeout(events, now \\ DateTime.utc_now()) do
+  defp next_events_and_timeout(events, now \\ TimeUtils.utc_now()) do
     case events |> event_wakeups() |> Enum.drop_while(&TimeUtils.is_before?(&1, now)) do
       [] ->
         Fetes.calendar(now) |> next_events_and_timeout(now)
