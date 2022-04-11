@@ -37,7 +37,7 @@ defmodule FeteBot.Tracker.Scheduler do
   end
 
   defp next_events_and_timeout(events, now \\ TimeUtils.utc_now()) do
-    case events |> event_wakeups() |> Enum.drop_while(&TimeUtils.is_before?(&1, now)) do
+    case events |> event_wakeups() |> Enum.drop_while(&TimeUtils.is_before_or_at?(&1, now)) do
       [] ->
         Fetes.calendar(now) |> next_events_and_timeout(now)
 
