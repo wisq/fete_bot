@@ -8,7 +8,7 @@ defmodule FeteBot.Test.MockDiscord do
       mock(
         :create_message,
         {channel_id, options},
-        fn _ -> {:ok, DiscordFactory.message(channel_id: channel_id)} end
+        fn _ -> {:ok, DiscordFactory.build(:message, channel_id: channel_id)} end
       )
     end
 
@@ -16,7 +16,9 @@ defmodule FeteBot.Test.MockDiscord do
       mock(
         :edit_message,
         {channel_id, message_id, options},
-        fn _ -> {:ok, DiscordFactory.message(channel_id: channel_id, message_id: message_id)} end
+        fn _ ->
+          {:ok, DiscordFactory.build(:message, channel_id: channel_id, message_id: message_id)}
+        end
       )
     end
 
@@ -39,7 +41,7 @@ defmodule FeteBot.Test.MockDiscord do
       mock(
         :create_dm,
         {user_id},
-        fn _ -> {:ok, DiscordFactory.channel(type: 1)} end
+        fn _ -> {:ok, DiscordFactory.build(:channel, type: 1)} end
       )
     end
 

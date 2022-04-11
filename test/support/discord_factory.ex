@@ -2,38 +2,36 @@ defmodule FeteBot.Test.DiscordFactory do
   import Bitwise, only: [<<<: 2, bor: 2]
   alias Nostrum.Struct.{Message, User, Guild, Channel}
 
-  def user(changes \\ []) do
+  def build(:user) do
     %User{
       id: generate_snowflake()
     }
-    |> modify(changes)
   end
 
-  def message(changes \\ []) do
+  def build(:message) do
     %Message{
       id: generate_snowflake(),
       channel_id: generate_snowflake(),
-      author: user()
+      author: build(:user)
     }
-    |> modify(changes)
   end
 
-  def guild(changes \\ []) do
+  def build(:guild) do
     %Guild{
       id: generate_snowflake(),
       owner_id: generate_snowflake()
     }
-    |> modify(changes)
   end
 
-  def channel(changes \\ []) do
+  def build(:channel) do
     %Channel{
       id: generate_snowflake()
     }
-    |> modify(changes)
   end
 
-  defp modify(obj, attrs) when is_list(attrs), do: struct!(obj, attrs)
+  def build(factory_name, attributes) do
+    factory_name |> build() |> struct!(attributes)
+  end
 
   # start of 2015 in milliseconds
   @discord_epoch 1_420_070_400_000

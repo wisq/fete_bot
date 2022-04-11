@@ -22,9 +22,9 @@ defmodule FeteBot.CommandsTest do
 
   describe "run/2 with 'enable' command" do
     test "accepts command, creates a Channel record, and schedules a manual update" do
-      owner = DiscordFactory.user()
-      guild = DiscordFactory.guild(owner_id: owner.id)
-      message = DiscordFactory.message(author: owner, guild_id: guild.id)
+      owner = DiscordFactory.build(:user)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id)
+      message = DiscordFactory.build(:message, author: owner, guild_id: guild.id)
 
       start_supervised!(GuildCache)
       GuildCache.create(guild)
@@ -48,10 +48,10 @@ defmodule FeteBot.CommandsTest do
     end
 
     test "rejects command if user is not server owner" do
-      author = DiscordFactory.user()
-      owner = DiscordFactory.user()
-      guild = DiscordFactory.guild(owner_id: owner.id)
-      message = DiscordFactory.message(author: author, guild_id: guild.id)
+      author = DiscordFactory.build(:user)
+      owner = DiscordFactory.build(:user)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id)
+      message = DiscordFactory.build(:message, author: author, guild_id: guild.id)
 
       start_supervised!(GuildCache)
       GuildCache.create(guild)
@@ -75,15 +75,15 @@ defmodule FeteBot.CommandsTest do
 
   describe "run/2 with 'disable' command" do
     test "accepts command and deletes the corresponding Channel record" do
-      channel = DataFactory.channel!()
-      owner = DiscordFactory.user()
-      guild = DiscordFactory.guild(owner_id: owner.id)
+      channel = DataFactory.insert!(:channel)
+      owner = DiscordFactory.build(:user)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id)
 
       start_supervised!(GuildCache)
       GuildCache.create(guild)
 
       message =
-        DiscordFactory.message(
+        DiscordFactory.build(:message,
           author: owner,
           guild_id: guild.id,
           channel_id: channel.channel_id
@@ -102,17 +102,17 @@ defmodule FeteBot.CommandsTest do
     end
 
     test "rejects command if user is not server owner" do
-      channel = DataFactory.channel!()
+      channel = DataFactory.insert!(:channel)
 
-      author = DiscordFactory.user()
-      owner = DiscordFactory.user()
-      guild = DiscordFactory.guild(owner_id: owner.id)
+      author = DiscordFactory.build(:user)
+      owner = DiscordFactory.build(:user)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id)
 
       start_supervised!(GuildCache)
       GuildCache.create(guild)
 
       message =
-        DiscordFactory.message(
+        DiscordFactory.build(:message,
           author: author,
           guild_id: guild.id,
           channel_id: channel.channel_id
@@ -131,15 +131,15 @@ defmodule FeteBot.CommandsTest do
     end
 
     test "handles channel not found" do
-      existing_channel = DataFactory.channel!()
-      owner = DiscordFactory.user()
-      guild = DiscordFactory.guild(owner_id: owner.id)
+      existing_channel = DataFactory.insert!(:channel)
+      owner = DiscordFactory.build(:user)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id)
 
       start_supervised!(GuildCache)
       GuildCache.create(guild)
 
       message =
-        DiscordFactory.message(
+        DiscordFactory.build(:message,
           author: owner,
           guild_id: guild.id,
           channel_id: existing_channel.channel_id + 1
