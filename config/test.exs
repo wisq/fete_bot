@@ -3,6 +3,7 @@ import Config
 config :fete_bot, FeteBot.Application, start_bot: false, start_test: true
 
 config :fete_bot, FeteBot.Discord, backend: FeteBot.Test.MockDiscord.Backend
+config :fete_bot, FeteBot.TimeUtils, backend: FeteBot.Test.MockDateTime
 
 config :fete_bot, FeteBot.Repo,
   username: "postgres",
