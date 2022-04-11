@@ -6,23 +6,33 @@ defmodule FeteBot.Application do
     children =
       [
         FeteBot.Repo
-      ] ++ bot_children()
+      ] ++ bot_children() ++ test_children()
 
     options = [strategy: :rest_for_one, name: FeteBot.Supervisor]
     Supervisor.start_link(children, options)
   end
 
-  def start_bot? do
+  def config(name) do
     Application.fetch_env!(:fete_bot, __MODULE__)
-    |> Keyword.fetch!(:start_bot)
+    |> Keyword.fetch!(name)
   end
 
   def bot_children() do
-    if start_bot?() do
+    if config(:start_bot) do
       [
         FeteBot.Consumer,
         FeteBot.Tracker.Scheduler,
         FeteBot.Notifier.Scheduler
+      ]
+    else
+      []
+    end
+  end
+
+  def test_children() do
+    if config(:start_test) do
+      [
+        FeteBot.Test.MockDiscord
       ]
     else
       []
