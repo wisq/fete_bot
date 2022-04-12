@@ -14,11 +14,11 @@ defmodule FeteBot.Test.MockGenServer do
 
   def child_spec(module, init_arg \\ nil, options \\ []) do
     module.child_spec(init_arg)
-    |> Map.put(:start, {__MODULE__, :start_link, [module, init_arg, options]})
+    |> Map.put(:start, {__MODULE__, :start_link, [self(), module, init_arg, options]})
   end
 
-  def start_link(module, init_arg, options) do
-    GenServer.start_link(__MODULE__, {module, init_arg}, options)
+  def start_link(ref_pid, module, init_arg, options) do
+    GenServer.start_link(__MODULE__, {module, init_arg, ref_pid}, options)
   end
 
   def get_timeout(pid) do
@@ -30,7 +30,8 @@ defmodule FeteBot.Test.MockGenServer do
   end
 
   @impl true
-  def init({module, init_arg}) do
+  def init({module, init_arg, ref_pid}) do
+    MockDateTime.add_mock_server(self(), ref_pid)
     outer = %State{module: module}
 
     case module.init(init_arg) do

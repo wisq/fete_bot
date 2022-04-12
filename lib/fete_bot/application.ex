@@ -32,7 +32,8 @@ defmodule FeteBot.Application do
   def test_children() do
     if config(:start_test) do
       [
-        FeteBot.Test.MockDiscord
+        FeteBot.Test.MockDiscord,
+        FeteBot.Test.MockDateTime
       ]
     else
       []

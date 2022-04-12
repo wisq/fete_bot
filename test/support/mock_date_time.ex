@@ -3,6 +3,7 @@ defmodule FeteBot.Test.MockDateTime do
   require Logger
 
   alias FeteBot.Test.MockGenServer
+  alias FeteBot.TimeUtils
 
   @ets :mock_date_time
   @prefix "[#{inspect(__MODULE__)}]"
@@ -11,72 +12,162 @@ defmodule FeteBot.Test.MockDateTime do
     @enforce_keys [:ets]
     defstruct(
       ets: nil,
-      mock_servers: []
+      mock_servers: %{}
     )
   end
 
-  def child_spec(%DateTime{} = start_time), do: super(start_time)
-
-  def start_link(%DateTime{} = start_time) do
-    GenServer.start_link(__MODULE__, start_time, name: __MODULE__)
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  def utc_now do
-    case :ets.whereis(@ets) do
-      ref when is_reference(ref) ->
-        [now: now] = :ets.lookup(ref, :now)
-        now
-
-      nil ->
-        DateTime.utc_now()
+  def utc_now(pid \\ self()) do
+    case ets_lookup(pid) do
+      {:ok, :realtime} -> DateTime.utc_now()
+      {:ok, %DateTime{} = dt} -> dt
+      {:ok, other_pid} when is_pid(other_pid) -> utc_now(other_pid)
+      :error -> use_realtime(pid)
     end
   end
 
-  alias FeteBot.TimeUtils
-
-  def advance_to(%DateTime{} = datetime) do
-    if datetime |> TimeUtils.is_before?(utc_now()),
-      do: raise(ArgumentError, "Cannot go backwards in time")
-
-    GenServer.call(__MODULE__, {:advance_to, datetime})
+  defp ets_lookup(pid, ets \\ @ets) do
+    case :ets.lookup(ets, pid) do
+      [{^pid, :realtime}] -> {:ok, :realtime}
+      [{^pid, other_pid}] when is_pid(other_pid) -> {:ok, other_pid}
+      [{^pid, %DateTime{} = dt}] -> {:ok, dt}
+      [] -> :error
+    end
   end
 
-  def advance_by(%Timex.Duration{} = duration) do
+  defp use_realtime(pid) do
+    :ok = GenServer.call(__MODULE__, {:using_realtime, pid})
+    DateTime.utc_now()
+  end
+
+  def mock_time(%DateTime{} = datetime, pid \\ self()) do
+    :ok = GenServer.call(__MODULE__, {:mock_time, pid, datetime})
+  end
+
+  def advance_to(%DateTime{} = datetime, pid \\ self()) do
+    :ok = GenServer.call(__MODULE__, {:advance_to, pid, datetime})
+  end
+
+  def advance_by(%Timex.Duration{} = duration, pid \\ self()) do
     utc_now()
     |> Timex.add(duration)
-    |> advance_to()
+    |> advance_to(pid)
   end
 
-  def add_server(pid) when is_pid(pid) do
-    GenServer.cast(__MODULE__, {:add_server, pid})
-    pid
+  def add_pid(pid, ref_pid \\ self()) when is_pid(pid) do
+    :ok = GenServer.call(__MODULE__, {:add_pid, pid, ref_pid})
+  end
+
+  def add_mock_server(pid, ref_pid \\ self()) when is_pid(pid) do
+    :ok = GenServer.call(__MODULE__, {:add_mock_server, pid, ref_pid})
   end
 
   @impl true
-  def init(start_time) do
+  def init(_) do
     ets = :ets.new(@ets, [:named_table, :set, :protected])
-    start_time |> increase_precision() |> set_time(ets)
     {:ok, %State{ets: ets}}
   end
 
   @impl true
-  def handle_cast({:add_server, pid}, state) do
-    {:noreply, %State{state | mock_servers: [pid | state.mock_servers]}}
+  def handle_call({:mock_time, pid, datetime}, _from, %State{ets: ets} = state) do
+    Logger.debug("#{@prefix} mocking time for #{inspect(pid)}")
+
+    case ets_lookup(pid, ets) do
+      :error ->
+        datetime |> increase_precision() |> set_time(pid, ets)
+        Process.monitor(pid)
+        servers = state.mock_servers |> Map.put(pid, [])
+        {:reply, :ok, %State{state | mock_servers: servers}}
+
+      {:ok, _} ->
+        {:reply, {:error, :already_mocked}, state}
+    end
   end
 
   @impl true
-  def handle_call({:advance_to, datetime}, from, state) do
-    case next_timeout(datetime, state.mock_servers) do
-      {:advance_to, ^datetime} ->
-        Logger.debug("#{@prefix} advancing to requested time")
-        set_time(datetime, state.ets)
+  def handle_call({:using_realtime, pid}, _from, %State{ets: ets} = state) do
+    case ets_lookup(pid, ets) do
+      :error ->
+        :ets.insert(ets, {pid, :realtime})
+        Process.monitor(pid)
         {:reply, :ok, state}
 
-      {pid, dt} when is_pid(pid) ->
-        Logger.debug("#{@prefix} triggering server: #{inspect(pid)}")
-        set_time(dt, state.ets)
-        MockGenServer.trigger_timeout(pid)
-        handle_call({:advance_to, datetime}, from, state)
+      {:ok, _} ->
+        {:reply, {:error, :already_mocked}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:add_pid, pid, ref_pid}, _from, %State{ets: ets} = state) do
+    case ets_lookup(pid, ets) do
+      :error ->
+        :ets.insert(ets, {pid, ref_pid})
+        Process.monitor(pid)
+        {:reply, :ok, state}
+
+      {:ok, _} ->
+        {:reply, {:error, :already_mocked}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:add_mock_server, server_pid, ref_pid}, from, state) do
+    case handle_call({:add_pid, server_pid, ref_pid}, from, state) do
+      {:reply, :ok, ^state} ->
+        servers = state.mock_servers |> Map.update!(ref_pid, fn ps -> [server_pid | ps] end)
+        {:reply, :ok, %State{state | mock_servers: servers}}
+
+      {:reply, {:error, _}, ^state} = rval ->
+        rval
+    end
+  end
+
+  @impl true
+  def handle_call({:advance_to, ref_pid, datetime}, from, state) do
+    with {:ok, servers} <- Map.fetch(state.mock_servers, ref_pid),
+         {:ok, now} <- ets_lookup(ref_pid, state.ets),
+         true <- datetime |> TimeUtils.is_after?(now) do
+      case next_timeout(datetime, servers) do
+        {:advance_to, ^datetime} ->
+          Logger.debug("#{@prefix} advancing to requested time")
+          set_time(datetime, ref_pid, state.ets)
+          {:reply, :ok, state}
+
+        {server_pid, dt} when is_pid(server_pid) ->
+          Logger.debug("#{@prefix} triggering server: #{inspect(server_pid)}")
+          set_time(dt, ref_pid, state.ets)
+          MockGenServer.trigger_timeout(server_pid)
+          handle_call({:advance_to, ref_pid, datetime}, from, state)
+      end
+    else
+      :error -> {:reply, {:error, :not_mocked}, state}
+      false -> {:reply, {:error, :backwards_time_advance}, state}
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, _, :process, pid, _}, %State{ets: ets} = state) do
+    case ets_lookup(pid, ets) do
+      {:ok, :realtime} ->
+        :ets.delete(ets, pid)
+        {:noreply, state}
+
+      {:ok, %DateTime{}} ->
+        Logger.debug("#{@prefix} deleting mocked pid #{inspect(pid)}")
+        :ets.delete(ets, pid)
+        {:noreply, %State{state | mock_servers: state.mock_servers |> Map.delete(pid)}}
+
+      {:ok, ref_pid} when is_pid(ref_pid) ->
+        Logger.debug("#{@prefix} deleting pid #{inspect(pid)} with parent #{inspect(ref_pid)}")
+        :ets.delete(ets, pid)
+        {:noreply, state}
+
+      :error ->
+        Logger.warn("#{@prefix} Don't know anything about monitored process #{inspect(pid)}")
+        {:noreply, state}
     end
   end
 
@@ -87,9 +178,9 @@ defmodule FeteBot.Test.MockDateTime do
     |> Enum.min_by(fn {_, dt} -> DateTime.to_unix(dt) end)
   end
 
-  defp set_time(datetime, ets) do
-    Logger.debug("#{@prefix} new time is #{inspect(datetime)}")
-    :ets.insert(ets, {:now, datetime})
+  defp set_time(datetime, pid, ets) do
+    Logger.debug("#{@prefix} new time for #{inspect(pid)} is #{inspect(datetime)}")
+    :ets.insert(ets, {pid, datetime})
   end
 
   # GenServers that rely on timeouts cannot expect absolute precision -- the

@@ -20,12 +20,8 @@ defmodule FeteBot.Tracker.SchedulerTest do
   end
 
   defp start_scheduler(start_time) do
-    MockDateTime.child_spec(start_time)
-    |> start_supervised!()
-
-    MockGenServer.child_spec(Scheduler)
-    |> start_supervised!()
-    |> MockDateTime.add_server()
+    MockDateTime.mock_time(start_time)
+    MockGenServer.child_spec(Scheduler) |> start_supervised!()
   end
 
   @alarm_clock "\u{23F0}"
