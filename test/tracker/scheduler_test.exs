@@ -1,5 +1,5 @@
 defmodule FeteBot.Tracker.SchedulerTest do
-  use FeteBot.TestCase, async: false
+  use FeteBot.TestCase, async: true
 
   alias Timex.Duration
   alias FeteBot.Tracker.Scheduler
@@ -20,8 +20,10 @@ defmodule FeteBot.Tracker.SchedulerTest do
   end
 
   defp start_scheduler(start_time) do
-    MockDateTime.mock_time(start_time)
-    MockGenServer.child_spec(Scheduler) |> start_supervised!()
+    :ok = MockDateTime.mock_time(start_time)
+    {:ok, pid} = MockGenServer.child_spec(Scheduler) |> start_supervised()
+    Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), pid)
+    pid
   end
 
   @alarm_clock "\u{23F0}"
