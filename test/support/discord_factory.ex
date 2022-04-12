@@ -1,6 +1,6 @@
 defmodule FeteBot.Test.DiscordFactory do
   import Bitwise, only: [<<<: 2, bor: 2]
-  alias Nostrum.Struct.{Message, User, Guild, Channel}
+  alias Nostrum.Struct.{Message, User, Guild, Channel, Event, Emoji}
 
   def build(:user) do
     %User{
@@ -26,6 +26,18 @@ defmodule FeteBot.Test.DiscordFactory do
   def build(:channel) do
     %Channel{
       id: generate_snowflake()
+    }
+  end
+
+  def build(:emoji) do
+    %Emoji{}
+  end
+
+  def build(:message_reaction_add_event) do
+    %Event.MessageReactionAdd{
+      channel_id: generate_snowflake(),
+      message_id: generate_snowflake(),
+      user_id: generate_snowflake()
     }
   end
 
