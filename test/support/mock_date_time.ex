@@ -174,6 +174,7 @@ defmodule FeteBot.Test.MockDateTime do
   defp next_timeout(advance_dt, server_pids) do
     server_pids
     |> Enum.map(&{&1, MockGenServer.get_timeout(&1) |> fudge_server_timeout()})
+    |> Enum.reject(fn {_, dt} -> is_nil(dt) end)
     |> Enum.concat([{:advance_to, advance_dt}])
     |> Enum.min_by(fn {_, dt} -> DateTime.to_unix(dt) end)
   end
@@ -197,6 +198,8 @@ defmodule FeteBot.Test.MockDateTime do
   # TBH, those shouldn't actually happen in the real world, so I think that's
   # okay. Nevertheless, feel free to disable this temporarily if you want to
   # check for those.
+  defp fudge_server_timeout(nil), do: nil
+
   defp fudge_server_timeout(datetime) do
     usecs = Enum.random(1..10000)
     datetime |> DateTime.add(usecs, :microsecond)

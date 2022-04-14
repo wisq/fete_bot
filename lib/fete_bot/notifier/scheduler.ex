@@ -23,12 +23,12 @@ defmodule FeteBot.Notifier.Scheduler do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  def next_event(%Event{} = event) do
-    GenServer.cast(__MODULE__, {:next_event, event})
+  def next_event(%Event{} = event, pid \\ __MODULE__) do
+    GenServer.cast(pid, {:next_event, event})
   end
 
-  def refresh_user(%AlarmUser{} = user) do
-    GenServer.cast(__MODULE__, {:refresh_user, user.id})
+  def refresh_user(%AlarmUser{} = user, pid \\ __MODULE__) do
+    GenServer.cast(pid, {:refresh_user, user.id})
   end
 
   def init(nil) do
@@ -89,7 +89,7 @@ defmodule FeteBot.Notifier.Scheduler do
     Logger.info("Next alarm will be ##{alarm.id} (for user ##{alarm.alarm_user_id}) at #{time}.")
 
     time
-    |> DateTime.diff(DateTime.utc_now(), :millisecond)
+    |> DateTime.diff(TimeUtils.utc_now(), :millisecond)
     |> handle_negative_timeout()
   end
 
@@ -129,10 +129,10 @@ defmodule FeteBot.Notifier.Scheduler do
     |> elem(1)
   end
 
-  defp queue_cutoff_time([]), do: DateTime.utc_now()
+  defp queue_cutoff_time([]), do: TimeUtils.utc_now()
 
   defp queue_cutoff_time([%QueueEntry{time: time} | _]) do
-    now = DateTime.utc_now()
+    now = TimeUtils.utc_now()
     if time |> TimeUtils.is_before?(now), do: time, else: now
   end
 
@@ -163,7 +163,7 @@ defmodule FeteBot.Notifier.Scheduler do
     |> Enum.sort_by(&DateTime.to_unix(&1.time, :microsecond))
   end
 
-  defp queue_pop_expired(queue, cutoff \\ DateTime.utc_now()) do
+  defp queue_pop_expired(queue, cutoff \\ TimeUtils.utc_now()) do
     queue
     |> Enum.split_while(fn %QueueEntry{time: time} ->
       time |> TimeUtils.is_before?(cutoff)
