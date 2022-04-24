@@ -14,6 +14,9 @@ defmodule FeteBot.Tracker.SchedulerTest do
     def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: @name)
     def init(_), do: {:ok, nil}
     def handle_cast({:next_event, event}, _), do: {:noreply, event}
+    # We sometimes get these messages from the Notifier tests (due to async).
+    # I could maybe find a smarter way to mock this out, but this works for now.
+    def handle_cast({:refresh_user, _}, event), do: {:noreply, event}
     def handle_call(:get, _from, event), do: {:reply, event, nil}
 
     def get, do: GenServer.call(@name, :get)
