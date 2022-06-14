@@ -39,6 +39,6 @@ docker_build:
 
 docker_deploy:
 	ln -nsf .env.$(ENV) .env.deploy
-	docker compose up $(UPFLAGS)
+	docker compose up --force-recreate $(UPFLAGS)
 
 .PHONY: hooks test dev prod dev_build dev_deploy prod_build prod_deploy docker_build docker_deploy
