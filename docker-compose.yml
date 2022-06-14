@@ -7,8 +7,8 @@ services:
       - .env.deploy
     environment:
       - APP_MODE=admin
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks:
+      - postgres
     command: eval FeteBot.Release.migrate
     restart: "no"
   server:
@@ -18,9 +18,13 @@ services:
       - .env.deploy
     environment:
       - APP_MODE=bot
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks:
+      - postgres
     command: start
     depends_on:
       - admin
     restart: unless-stopped
+networks:
+  postgres:
+    external:
+      name: postgres
