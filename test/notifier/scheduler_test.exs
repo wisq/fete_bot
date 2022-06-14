@@ -1,5 +1,6 @@
 defmodule FeteBot.Notifier.SchedulerTest do
   use FeteBot.TestCase, async: true
+  import ExUnit.CaptureLog
 
   alias Timex.Duration
   alias FeteBot.Notifier.Scheduler
@@ -104,6 +105,38 @@ defmodule FeteBot.Notifier.SchedulerTest do
 
     assert user_dm_id == user.dm_id
     assert alarm2_msg_id == Repo.reload!(alarm2).last_alarm_message_id
+  end
+
+  test "notifier scheduler handles API errors" do
+    user = DataFactory.insert!(:alarm_user)
+    alarm!(user, 2, :session, 10)
+
+    pid = start_scheduler(~U[2022-04-15 15:30:00Z])
+    calendar() |> Enum.at(1) |> Scheduler.next_event(pid)
+
+    dm_id = user.dm_id
+    me = self()
+
+    MockDiscord.mock(
+      :create_message,
+      fn
+        ^dm_id, "The next fête will start in ten minutes." ->
+          send(me, :mocked_create_message)
+
+          {:error,
+           %Nostrum.Error.ApiError{
+             status_code: 403,
+             response: %{code: 50007, message: "Cannot send messages to this user"}
+           }}
+      end,
+      pid
+    )
+
+    # alarm is at 16:50
+    capture_log(fn ->
+      MockDateTime.advance_to(~U[2022-04-15 16:50:01Z])
+      assert_receive(:mocked_create_message)
+    end)
   end
 
   test "notifier scheduler deletes last alarm message if set" do

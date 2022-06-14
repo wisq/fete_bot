@@ -3,6 +3,7 @@ defmodule FeteBot.Notifier do
 
   alias Ecto.Multi
   import Ecto.Query, only: [from: 2]
+  alias Nostrum.Error.ApiError
 
   alias FeteBot.Repo
   alias FeteBot.Discord
@@ -248,16 +249,21 @@ defmodule FeteBot.Notifier do
     if is_integer(old_id = alarm.last_alarm_message_id),
       do: delete_message(user.dm_id, old_id)
 
-    # Posts an unformatted message first, then edits it to a formatted one.
-    # This makes notifications look better:
-    #   - desktop notifications can't handle markdown
-    #   - mobile notifications additionally can't handle timestamps
-    text1 = Alarm.unformatted_alarm_message(alarm, event)
-    msg = Discord.create_message!(user.dm_id, text1)
-    Alarm.update_last_alarm_message_changeset(alarm, msg.id) |> Repo.update!()
+    try do
+      # Posts an unformatted message first, then edits it to a formatted one.
+      # This makes notifications look better:
+      #   - desktop notifications can't handle markdown
+      #   - mobile notifications additionally can't handle timestamps
+      text1 = Alarm.unformatted_alarm_message(alarm, event)
+      msg = Discord.create_message!(user.dm_id, text1)
+      Alarm.update_last_alarm_message_changeset(alarm, msg.id) |> Repo.update!()
 
-    text2 = Alarm.formatted_alarm_message(alarm, event)
-    msg = Discord.edit_message!(user.dm_id, msg.id, text2)
-    Reactions.add_alarm_reactions(msg, alarm)
+      text2 = Alarm.formatted_alarm_message(alarm, event)
+      msg = Discord.edit_message!(user.dm_id, msg.id, text2)
+      Reactions.add_alarm_reactions(msg, alarm)
+    rescue
+      err in ApiError ->
+        Logger.warn("Unable to send alarm ##{alarm.id}: #{ApiError.message(err)}")
+    end
   end
 end
