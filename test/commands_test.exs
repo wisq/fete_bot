@@ -20,6 +20,9 @@ defmodule FeteBot.CommandsTest do
   alias FeteBot.Commands
   alias FeteBot.Tracker.Channel
 
+  @manage_guild_bit Nostrum.Permission.to_bit(:manage_guild)
+  @not_manager_msg "This command can only be run by the server owner, or by users with the \"Manage Server\" permission."
+
   describe "run/2 with 'enable' command" do
     test "accepts command, creates a Channel record, and schedules a manual update" do
       owner = DiscordFactory.build(:user)
@@ -47,10 +50,38 @@ defmodule FeteBot.CommandsTest do
       assert Keyword.get(args, :message_reference).message_id == message.id
     end
 
-    test "rejects command if user is not server owner" do
+    test "accepts command from server manager" do
       author = DiscordFactory.build(:user)
       owner = DiscordFactory.build(:user)
-      guild = DiscordFactory.build(:guild, owner_id: owner.id)
+      role = DiscordFactory.build(:role, permissions: @manage_guild_bit)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id, roles: %{role.id => role})
+
+      start_supervised!(GuildCache)
+      GuildCache.create(guild)
+
+      message =
+        DiscordFactory.build(:message,
+          author: author,
+          guild_id: guild.id,
+          member: DiscordFactory.build(:member, roles: [role.id])
+        )
+
+      start_supervised!(FakeScheduler)
+      Commands.run("enable", message)
+
+      # Replies to message:
+      assert [{:create_message, {cid, args}}] = MockDiscord.messages()
+      assert Keyword.get(args, :content) == "FêteBot has been enabled in <##{cid}>."
+    end
+
+    test "rejects command if user is regular user" do
+      author = DiscordFactory.build(:user)
+      owner = DiscordFactory.build(:user)
+
+      # Dummy role, to make sure member role lookup is working correctly.
+      role = DiscordFactory.build(:role, permissions: @manage_guild_bit)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id, roles: %{role.id => role})
+
       message = DiscordFactory.build(:message, author: author, guild_id: guild.id)
 
       start_supervised!(GuildCache)
@@ -68,13 +99,13 @@ defmodule FeteBot.CommandsTest do
       # Replies to message:
       assert [{:create_message, {cid, args}}] = MockDiscord.messages()
       assert cid == message.channel_id
-      assert Keyword.get(args, :content) == "This command can only be run by the server owner."
+      assert Keyword.get(args, :content) == @not_manager_msg
       assert Keyword.get(args, :message_reference).message_id == message.id
     end
   end
 
   describe "run/2 with 'disable' command" do
-    test "accepts command and deletes the corresponding Channel record" do
+    test "accepts command from server owner and deletes the corresponding Channel record" do
       channel = DataFactory.insert!(:channel)
       owner = DiscordFactory.build(:user)
       guild = DiscordFactory.build(:guild, owner_id: owner.id)
@@ -101,12 +132,12 @@ defmodule FeteBot.CommandsTest do
       assert Keyword.get(args, :message_reference).message_id == message.id
     end
 
-    test "rejects command if user is not server owner" do
+    test "accepts command from server manager" do
       channel = DataFactory.insert!(:channel)
-
       author = DiscordFactory.build(:user)
       owner = DiscordFactory.build(:user)
-      guild = DiscordFactory.build(:guild, owner_id: owner.id)
+      role = DiscordFactory.build(:role, permissions: @manage_guild_bit)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id, roles: %{role.id => role})
 
       start_supervised!(GuildCache)
       GuildCache.create(guild)
@@ -115,8 +146,35 @@ defmodule FeteBot.CommandsTest do
         DiscordFactory.build(:message,
           author: author,
           guild_id: guild.id,
+          channel_id: channel.channel_id,
+          member: DiscordFactory.build(:member, roles: [role.id])
+        )
+
+      Commands.run("disable", message)
+
+      # Replies to message:
+      assert [{:create_message, {cid, args}}] = MockDiscord.messages()
+      assert Keyword.get(args, :content) == "FêteBot has been disabled in <##{cid}>."
+    end
+
+    test "rejects command if user is regular user" do
+      channel = DataFactory.insert!(:channel)
+      author = DiscordFactory.build(:user)
+      owner = DiscordFactory.build(:user)
+
+      # Dummy role, to make sure member role lookup is working correctly.
+      role = DiscordFactory.build(:role, permissions: @manage_guild_bit)
+      guild = DiscordFactory.build(:guild, owner_id: owner.id, roles: %{role.id => role})
+
+      message =
+        DiscordFactory.build(:message,
+          author: author,
+          guild_id: guild.id,
           channel_id: channel.channel_id
         )
+
+      start_supervised!(GuildCache)
+      GuildCache.create(guild)
 
       Commands.run("disable", message)
 
@@ -126,7 +184,7 @@ defmodule FeteBot.CommandsTest do
       # Replies to message:
       assert [{:create_message, {cid, args}}] = MockDiscord.messages()
       assert cid == message.channel_id
-      assert Keyword.get(args, :content) == "This command can only be run by the server owner."
+      assert Keyword.get(args, :content) == @not_manager_msg
       assert Keyword.get(args, :message_reference).message_id == message.id
     end
 

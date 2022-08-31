@@ -6,14 +6,15 @@ defmodule FeteBot.Commands do
   alias FeteBot.Discord
 
   @bot "FêteBot"
+  @not_manager_msg "This command can only be run by the server owner, or by users with the \"Manage Server\" permission."
 
   def run("enable", msg) do
-    with :ok <- check_guild_owner(msg.author.id, msg.guild_id),
+    with :ok <- check_guild_manager(msg.guild_id, msg.author.id, msg.member),
          :ok <- Tracker.enable(msg.channel_id) do
       reply(msg, "#{@bot} has been enabled in #{channel_link(msg)}.")
     else
-      {:error, :not_owner} ->
-        reply(msg, "This command can only be run by the server owner.")
+      {:error, :not_manager} ->
+        reply(msg, @not_manager_msg)
 
       {:error, :already_enabled} ->
         reply(msg, "#{@bot} is already enabled in #{channel_link(msg)}.")
@@ -21,12 +22,12 @@ defmodule FeteBot.Commands do
   end
 
   def run("disable", msg) do
-    with :ok <- check_guild_owner(msg.author.id, msg.guild_id),
+    with :ok <- check_guild_manager(msg.guild_id, msg.author.id, msg.member),
          :ok <- Tracker.disable(msg.channel_id) do
       reply(msg, "#{@bot} has been disabled in #{channel_link(msg)}.")
     else
-      {:error, :not_owner} ->
-        reply(msg, "This command can only be run by the server owner.")
+      {:error, :not_manager} ->
+        reply(msg, @not_manager_msg)
 
       {:error, :not_enabled} ->
         reply(msg, "#{@bot} is not enabled in #{channel_link(msg)}.")
@@ -37,12 +38,13 @@ defmodule FeteBot.Commands do
     reply(msg, "I don't understand that command.")
   end
 
-  defp check_guild_owner(user_id, guild_id) do
+  defp check_guild_manager(guild_id, user_id, member) do
     {:ok, guild} = guild_id |> GuildCache.get()
 
-    case guild.owner_id == user_id do
-      true -> :ok
-      false -> {:error, :not_owner}
+    cond do
+      user_id == guild.owner_id -> :ok
+      :manage_guild in Nostrum.Struct.Guild.Member.guild_permissions(member, guild) -> :ok
+      true -> {:error, :not_manager}
     end
   end
 
