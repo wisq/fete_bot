@@ -39,7 +39,7 @@ defmodule FeteBot.Consumer do
   end
 
   def handle_event({event, _, _}) do
-    IO.inspect(event)
+    # IO.inspect(event)
     :noop
   end
 end
