@@ -58,7 +58,7 @@ defmodule FeteBot.Tracker.Reactions do
   end
 
   defp ensure_one_reaction(msg, emoji, count) when count > 0 do
-    Logger.warn("Too many #{emoji} reactions (#{count}) on message ##{msg.id}, pruning.")
+    Logger.warning("Too many #{emoji} reactions (#{count}) on message ##{msg.id}, pruning.")
 
     me_id = Me.get().id
 
@@ -72,7 +72,7 @@ defmodule FeteBot.Tracker.Reactions do
   end
 
   defp delete_unknown_reaction(msg, emoji) do
-    Logger.warn("Deleting unknown reaction #{inspect(emoji)} on message ##{msg.id}")
+    Logger.warning("Deleting unknown reaction #{inspect(emoji)} on message ##{msg.id}")
     Discord.delete_reaction(msg.channel_id, msg.id, emoji)
   end
 end

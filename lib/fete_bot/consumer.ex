@@ -4,10 +4,6 @@ defmodule FeteBot.Consumer do
 
   alias Nostrum.Cache.Me
 
-  def start_link do
-    Consumer.start_link(__MODULE__)
-  end
-
   def handle_event({:GUILD_AVAILABLE, guild, _ws_state}) do
     Logger.info("Now active on guild ##{guild.id}: #{guild.name}")
   end
@@ -38,7 +34,7 @@ defmodule FeteBot.Consumer do
     end
   end
 
-  def handle_event({event, _, _}) do
+  def handle_event({_event, _, _}) do
     # IO.inspect(event)
     :noop
   end

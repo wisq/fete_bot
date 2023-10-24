@@ -117,7 +117,7 @@ defmodule FeteBot.Notifier.Reactions do
 
       {:error, %{status_code: 429, response: %{retry_after: secs}}} when secs < 5.0 ->
         ms = ceil(secs * 1000)
-        Logger.warn("Rate-limited adding reactions, sleeping for #{ms}ms")
+        Logger.warning("Rate-limited adding reactions, sleeping for #{ms}ms")
         Process.sleep(ms)
         add_reaction(msg, emoji)
     end

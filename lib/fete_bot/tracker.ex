@@ -80,7 +80,7 @@ defmodule FeteBot.Tracker do
         :ok
 
       {:error, %{response: %{code: 10008}}} ->
-        Logger.warn("Can't find message ##{msg_id} any more, re-posting.")
+        Logger.warning("Can't find message ##{msg_id} any more, re-posting.")
         # TODO: go back through history and delete any messages we find from us?
         update_message!(text, %Channel{channel | message_id: nil})
 

@@ -96,7 +96,7 @@ defmodule FeteBot.Notifier.Scheduler do
   defp handle_negative_timeout(t) when t >= 0, do: t
 
   defp handle_negative_timeout(t) when t < 0 do
-    Logger.warn("Notifier is lagging by #{abs(t)}ms")
+    Logger.warning("Notifier is lagging by #{abs(t)}ms")
     0
   end
 

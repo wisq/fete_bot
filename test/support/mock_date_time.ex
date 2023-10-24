@@ -166,7 +166,7 @@ defmodule FeteBot.Test.MockDateTime do
         {:noreply, state}
 
       :error ->
-        Logger.warn("#{@prefix} Don't know anything about monitored process #{inspect(pid)}")
+        Logger.warning("#{@prefix} Don't know anything about monitored process #{inspect(pid)}")
         {:noreply, state}
     end
   end

@@ -1,5 +1,5 @@
 defmodule FeteBot.TimeUtils do
-  @config Application.get_env(:fete_bot, __MODULE__, [])
+  @config Application.compile_env(:fete_bot, __MODULE__, [])
   @backend Keyword.get(@config, :backend, DateTime)
 
   @doc """

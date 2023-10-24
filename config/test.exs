@@ -14,4 +14,4 @@ config :fete_bot, FeteBot.Repo,
   after_connect: {FeteBot.Repo, :create_public_schema, database: "fetebot_test"}
 
 # Print only warnings and errors during test
-config :logger, level: :warn
+config :logger, level: :warning

@@ -233,7 +233,7 @@ defmodule FeteBot.Notifier do
 
       {:error, %{status_code: 429, response: %{retry_after: secs}}} when secs < 5.0 ->
         ms = ceil(secs * 1000)
-        Logger.warn("Rate-limited deleting messages, sleeping for #{ms}ms")
+        Logger.warning("Rate-limited deleting messages, sleeping for #{ms}ms")
         Process.sleep(ms)
         delete_message(channel_id, message_id)
 
@@ -263,7 +263,7 @@ defmodule FeteBot.Notifier do
       Reactions.add_alarm_reactions(msg, alarm)
     rescue
       err in ApiError ->
-        Logger.warn("Unable to send alarm ##{alarm.id}: #{ApiError.message(err)}")
+        Logger.warning("Unable to send alarm ##{alarm.id}: #{ApiError.message(err)}")
     end
   end
 end

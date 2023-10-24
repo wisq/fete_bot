@@ -1,5 +1,5 @@
 defmodule FeteBot.Discord do
-  @config Application.get_env(:fete_bot, __MODULE__, [])
+  @config Application.compile_env(:fete_bot, __MODULE__, [])
   @backend Keyword.get(@config, :backend, Nostrum.Api)
   require Logger
 
@@ -68,7 +68,7 @@ defmodule FeteBot.Discord do
     case func.() do
       {:error, %{status_code: 429, response: %{retry_after: secs}}} ->
         ms = ceil(secs * 1000) |> min(5000)
-        Logger.warn("Got rate-limited on #{name}, sleeping for #{ms}ms")
+        Logger.warning("Got rate-limited on #{name}, sleeping for #{ms}ms")
         Process.sleep(ms)
         {:cont, nil}
 
