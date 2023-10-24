@@ -36,12 +36,15 @@ defmodule FeteBot.MixProject do
 
       # Using latest master to workaround https://github.com/Kraigie/nostrum/pull/522
       {:nostrum, github: "Kraigie/nostrum", ref: "1ec397f", runtime: false},
-      {:ecto_sql, "~> 3.7"},
+      {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"},
       {:timex, "~> 3.7"},
       {:ecto_timex_duration, git: "https://github.com/wisq/ecto_timex_duration.git"},
-      {:briefly, "~> 0.3", only: :test, runtime: false},
-      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false}
+      {:briefly, "~> 0.4", only: :test, runtime: false},
+      {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
+      # Elixir v1.15 workaround:
+      {:ssl_verify_fun, "~> 1.1.6",
+       manager: :rebar3, only: [:test], runtime: false, override: true}
     ]
   end
 

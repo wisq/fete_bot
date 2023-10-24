@@ -1,7 +1,7 @@
 # ex:sw=4
 
 # ---- Build Stage ----
-FROM elixir:1.13-alpine AS builder
+FROM elixir:1.15-alpine AS builder
 
 # Set environment variables for building the application
 ARG mix_env
@@ -42,7 +42,7 @@ RUN mix release
 
 
 # ---- Runtime Stage ----
-FROM erlang:24-alpine AS release
+FROM erlang:26-alpine AS release
 
 # Set environment variables
 ARG mix_env
