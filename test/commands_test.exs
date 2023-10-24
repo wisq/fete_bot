@@ -29,8 +29,7 @@ defmodule FeteBot.CommandsTest do
       guild = DiscordFactory.build(:guild, owner_id: owner.id)
       message = DiscordFactory.build(:message, author: owner, guild_id: guild.id)
 
-      start_supervised!(GuildCache)
-      GuildCache.create(guild)
+      start_guild_cache(guild)
 
       start_supervised!(FakeScheduler)
       Commands.run("enable", message)
@@ -56,8 +55,7 @@ defmodule FeteBot.CommandsTest do
       role = DiscordFactory.build(:role, permissions: @manage_guild_bit)
       guild = DiscordFactory.build(:guild, owner_id: owner.id, roles: %{role.id => role})
 
-      start_supervised!(GuildCache)
-      GuildCache.create(guild)
+      start_guild_cache(guild)
 
       message =
         DiscordFactory.build(:message,
@@ -84,8 +82,7 @@ defmodule FeteBot.CommandsTest do
 
       message = DiscordFactory.build(:message, author: author, guild_id: guild.id)
 
-      start_supervised!(GuildCache)
-      GuildCache.create(guild)
+      start_guild_cache(guild)
 
       start_supervised!(FakeScheduler)
       Commands.run("enable", message)
@@ -110,8 +107,7 @@ defmodule FeteBot.CommandsTest do
       owner = DiscordFactory.build(:user)
       guild = DiscordFactory.build(:guild, owner_id: owner.id)
 
-      start_supervised!(GuildCache)
-      GuildCache.create(guild)
+      start_guild_cache(guild)
 
       message =
         DiscordFactory.build(:message,
@@ -139,8 +135,7 @@ defmodule FeteBot.CommandsTest do
       role = DiscordFactory.build(:role, permissions: @manage_guild_bit)
       guild = DiscordFactory.build(:guild, owner_id: owner.id, roles: %{role.id => role})
 
-      start_supervised!(GuildCache)
-      GuildCache.create(guild)
+      start_guild_cache(guild)
 
       message =
         DiscordFactory.build(:message,
@@ -173,8 +168,7 @@ defmodule FeteBot.CommandsTest do
           channel_id: channel.channel_id
         )
 
-      start_supervised!(GuildCache)
-      GuildCache.create(guild)
+      start_guild_cache(guild)
 
       Commands.run("disable", message)
 
@@ -193,8 +187,7 @@ defmodule FeteBot.CommandsTest do
       owner = DiscordFactory.build(:user)
       guild = DiscordFactory.build(:guild, owner_id: owner.id)
 
-      start_supervised!(GuildCache)
-      GuildCache.create(guild)
+      start_guild_cache(guild)
 
       message =
         DiscordFactory.build(:message,
@@ -214,5 +207,10 @@ defmodule FeteBot.CommandsTest do
       assert Keyword.get(args, :content) == "FêteBot is not enabled in <##{cid}>."
       assert Keyword.get(args, :message_reference).message_id == message.id
     end
+  end
+
+  defp start_guild_cache(guild) do
+    start_supervised!(GuildCache)
+    guild |> Map.from_struct() |> GuildCache.create()
   end
 end

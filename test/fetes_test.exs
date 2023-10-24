@@ -29,22 +29,22 @@ defmodule FetesTest do
     assert events = Fetes.calendar(~U[2022-04-10 20:00:00Z])
 
     assert %Event{
-             start_time: ~U[2022-04-09 23:00:00Z],
-             end_time: ~U[2022-04-09 23:27:25Z],
+             start_time: ~U[2022-04-09 23:00:00.000000Z],
+             end_time: ~U[2022-04-09 23:27:25.000000Z],
              epoch: 14,
              session: 1
            } = events |> List.first()
 
     assert %Event{
-             start_time: ~U[2022-04-10 05:00:00Z],
-             end_time: ~U[2022-04-10 05:27:25Z],
+             start_time: ~U[2022-04-10 05:00:00.000000Z],
+             end_time: ~U[2022-04-10 05:27:25.000000Z],
              epoch: 14,
              session: 4
            } = events |> Enum.at(3)
 
     assert %Event{
-             start_time: ~U[2022-04-10 21:00:00Z],
-             end_time: ~U[2022-04-10 21:27:25Z],
+             start_time: ~U[2022-04-10 21:00:00.000000Z],
+             end_time: ~U[2022-04-10 21:27:25.000000Z],
              epoch: 14,
              session: 12
            } = events |> List.last()
