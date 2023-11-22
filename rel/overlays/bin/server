@@ -1,0 +1,4 @@
+#!/bin/sh
+cd -P -- "$(dirname -- "$0")"
+export APP_MODE=bot 
+exec ./fete_bot start

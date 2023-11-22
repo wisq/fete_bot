@@ -38,6 +38,7 @@ COPY priv ./priv
 # Compile and release
 RUN mix compile
 COPY config/runtime.exs ./config/
+COPY rel ./rel
 RUN mix release
 
 
@@ -57,5 +58,9 @@ WORKDIR /app
 # Copy release
 COPY --from=builder /app/_build/${mix_env}/rel/fete_bot/ /app/
 
+# Allow storing TZdata updates
+RUN chown -R nobody /app/lib/tzdata-1.1.1/priv/
+
 # Set entrypoint
-ENTRYPOINT ["/app/bin/fete_bot"]
+USER nobody
+CMD ["/app/bin/server"]

@@ -1,0 +1,4 @@
+#!/bin/sh
+cd -P -- "$(dirname -- "$0")"
+export APP_MODE=admin
+exec ./fete_bot eval FeteBot.Release.migrate

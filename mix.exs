@@ -43,8 +43,7 @@ defmodule FeteBot.MixProject do
       {:briefly, "~> 0.4", only: :test, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       # Elixir v1.15 workaround:
-      {:ssl_verify_fun, "~> 1.1.6",
-       manager: :rebar3, only: [:test], runtime: false, override: true}
+      {:ssl_verify_fun, "~> 1.1.6", manager: :rebar3, runtime: false, override: true}
     ]
   end
 
