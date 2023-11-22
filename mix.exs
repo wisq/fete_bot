@@ -22,7 +22,7 @@ defmodule FeteBot.MixProject do
   end
 
   defp extra_applications(:test), do: [:logger]
-  defp extra_applications(_), do: [:logger, :nostrum]
+  defp extra_applications(_), do: [:logger, :nostrum, :runtime_tools]
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
