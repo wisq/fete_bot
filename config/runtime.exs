@@ -16,6 +16,7 @@ case System.fetch_env("APP_MODE") do
   {:ok, mode} ->
     # Running inside Docker
     config :fete_bot, FeteBot.Application, start_bot: mode == "bot"
+    config :fete_bot, FeteBot.HealthCheck, enabled: mode == "bot"
 
   :error ->
     if config_env() == :prod, do: raise("Must set APP_MODE in production environment")

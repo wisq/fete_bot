@@ -6,7 +6,7 @@ defmodule FeteBot.Application do
     children =
       [
         FeteBot.Repo
-      ] ++ bot_children() ++ test_children()
+      ] ++ bot_children() ++ test_children() ++ FeteBot.HealthCheck.children()
 
     options = [strategy: :rest_for_one, name: FeteBot.Supervisor]
     Supervisor.start_link(children, options)

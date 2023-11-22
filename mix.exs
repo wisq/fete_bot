@@ -42,6 +42,8 @@ defmodule FeteBot.MixProject do
       {:ecto_timex_duration, git: "https://github.com/wisq/ecto_timex_duration.git"},
       {:briefly, "~> 0.4", only: :test, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
+      # For health checks:
+      {:bandit, "~> 1.1"},
       # Elixir v1.15 workaround:
       {:ssl_verify_fun, "~> 1.1.6", manager: :rebar3, runtime: false, override: true}
     ]

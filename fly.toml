@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for fete-bot on 2023-11-21T20:25:34-05:00
+# ex: sw=2
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -10,3 +10,15 @@ primary_region = "yul"
 
 [deploy]
   release_command = "/app/bin/migrate"
+
+[http_service]
+  internal_port = 8080
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 0
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/"
