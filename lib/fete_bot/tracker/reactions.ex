@@ -65,8 +65,17 @@ defmodule FeteBot.Tracker.Reactions do
     with {:ok, users} <- Discord.get_reactions(msg.channel_id, msg.id, emoji) do
       users
       |> Enum.each(fn
-        %User{id: ^me_id} -> :noop
-        %User{id: uid} -> Discord.delete_user_reaction(msg.channel_id, msg.id, emoji, uid)
+        %User{id: ^me_id} ->
+          :noop
+
+        %User{id: uid} ->
+          Discord.delete_user_reaction(msg.channel_id, msg.id, emoji, uid)
+          # TODO: Figure out why hitting the rate limit causes the entire
+          # startup process to fail.  I suspect it's throwing something that is
+          # being caught at a higher level.
+          #
+          # For now, just sleep to make sure we don't hit it.
+          Process.sleep(1000)
       end)
     end
   end
